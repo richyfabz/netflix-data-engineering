@@ -1,0 +1,37 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Airflow runtime
+logs/*
+!logs/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+
+# Docker runtime / local
+*.pid
+
+# Power BI
+*.pbix
+
+# Large/raw datasets
+data/raw/*.csv
+data/processed/*
+
+# Keep raw directory structure
+!data/raw/.gitkeep
+!data/processed/.gitkeep
