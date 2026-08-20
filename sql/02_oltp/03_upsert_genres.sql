@@ -2,6 +2,8 @@
 -- Incrementally upsert unique genres from the current titles batch.
 -- ============================================================================
 
+
+
 WITH parsed_genres AS (
 
     SELECT DISTINCT

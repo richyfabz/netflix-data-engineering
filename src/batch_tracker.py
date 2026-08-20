@@ -90,3 +90,30 @@ def register_batch(
 
     # Return the identifier so downstream tasks know which batch they own.
     return batch_id
+
+# Mark a registered batch as actively processing.
+def mark_batch_running(batch_id):
+    """
+    Change a batch from RECEIVED to RUNNING.
+    """
+
+    # Connect to PostgreSQL using the ETL account.
+    with get_etl_connection() as connection:
+
+        # Open a cursor for the state update.
+        with connection.cursor() as cursor:
+
+            # Record that processing has started.
+            cursor.execute(
+                """
+                UPDATE etl.batch_history
+                SET
+                    status = 'RUNNING',
+                    processing_started_at = CURRENT_TIMESTAMP
+                WHERE batch_id = %s;
+                """,
+                (batch_id,),
+            )
+
+        # Save the state change.
+        connection.commit()
