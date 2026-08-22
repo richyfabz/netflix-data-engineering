@@ -117,3 +117,137 @@ def mark_batch_running(batch_id):
 
         # Save the state change.
         connection.commit()
+
+
+"""Batch tracking utilities for the Netflix ETL pipeline."""
+
+def mark_batch_running(batch_id):
+    """Mark a registered batch as actively processing."""
+
+    with get_etl_connection() as connection:
+        with connection.cursor() as cursor:
+
+            # Record when processing begins and clear any old error.
+            cursor.execute(
+                """
+                UPDATE etl.batch_history
+
+                SET
+                    status = 'RUNNING',
+                    processing_started_at = COALESCE(
+                        processing_started_at,
+                        CURRENT_TIMESTAMP
+                    ),
+                    processing_completed_at = NULL,
+                    error_message = NULL
+
+                WHERE batch_id = %(batch_id)s;
+                """,
+                {
+                    "batch_id": batch_id,
+                },
+            )
+
+        connection.commit()
+
+
+def mark_batch_success(batch_id):
+    """Mark a batch as successfully processed."""
+
+    with get_etl_connection() as connection:
+        with connection.cursor() as cursor:
+
+            # Complete the batch lifecycle only after all pipeline stages pass.
+            cursor.execute(
+                """
+                UPDATE etl.batch_history
+
+                SET
+                    status = 'SUCCESS',
+                    processing_completed_at = CURRENT_TIMESTAMP,
+                    error_message = NULL
+
+                WHERE batch_id = %(batch_id)s;
+                """,
+                {
+                    "batch_id": batch_id,
+                },
+            )
+
+        connection.commit()
+
+
+def mark_batch_failed(batch_id, error_message):
+    """Record a failed batch and preserve the failure reason."""
+
+    with get_etl_connection() as connection:
+        with connection.cursor() as cursor:
+
+            # Persist the failure so the batch can be diagnosed later.
+            cursor.execute(
+                """
+                UPDATE etl.batch_history
+
+                SET
+                    status = 'FAILED',
+                    processing_completed_at = CURRENT_TIMESTAMP,
+                    error_message = %(error_message)s
+
+                WHERE batch_id = %(batch_id)s;
+                """,
+                {
+                    "batch_id": batch_id,
+                    "error_message": str(error_message),
+                },
+            )
+
+        connection.commit()
+
+def get_batch_metadata(batch_id):
+    """Return operational metadata for one registered source batch."""
+
+    with get_etl_connection() as connection:
+        with connection.cursor() as cursor:
+
+            # Retrieve the batch fields required by pipeline control.
+            cursor.execute(
+                """
+                SELECT
+                    batch_id,
+                    file_name,
+                    received_at,
+                    rows_received,
+                    rows_processed,
+                    status
+                FROM etl.batch_history
+                WHERE batch_id = %(batch_id)s;
+                """,
+                {
+                    "batch_id": batch_id,
+                },
+            )
+
+            return cursor.fetchone()
+
+def validate_batch(batch_id):
+    """Validate that a registered batch exists and contains source rows."""
+
+    batch_metadata = get_batch_metadata(
+        batch_id
+    )
+
+    # Reject batch IDs that are not registered.
+    if batch_metadata is None:
+        raise ValueError(
+            f"Batch {batch_id} does not exist."
+        )
+
+    rows_received = batch_metadata[3]
+
+    # Reject empty source batches before transformations begin.
+    if rows_received is None or rows_received <= 0:
+        raise ValueError(
+            f"Batch {batch_id} contains no source rows."
+        )
+
+    return batch_metadata
