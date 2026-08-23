@@ -49,8 +49,7 @@ x-airflow-common:
   # In order to add custom dependencies or upgrade provider distributions you can use your extended image.
   # Comment the image line, place your Dockerfile in the directory where you placed the docker-compose.yaml
   # and uncomment the "build" line below, Then run `docker-compose build` to build the images.
-  image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:3.3.0}
-  # build: .
+  build: .
   env_file:
     - ${ENV_FILE_PATH:-.env}
   environment:
@@ -66,6 +65,13 @@ x-airflow-common:
     AIRFLOW__CORE__EXECUTION_API_SERVER_URL: 'http://airflow-apiserver:8080/execution/'
     AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW__API_AUTH__JWT_SECRET:-airflow_jwt_secret}
     AIRFLOW__API_AUTH__JWT_ISSUER: ${AIRFLOW__API_AUTH__JWT_ISSUER:-airflow}
+        # Netflix ETL database connection.
+    # PostgreSQL runs on the Mac host, not inside the Airflow container.
+    NETFLIX_DB_HOST: host.docker.internal
+    NETFLIX_DB_PORT: ${NETFLIX_DB_PORT}
+    NETFLIX_DB_NAME: ${NETFLIX_DB_NAME}
+    NETFLIX_ETL_USER: ${NETFLIX_ETL_USER}
+    NETFLIX_ETL_PASSWORD: ${NETFLIX_ETL_PASSWORD}
     # yamllint disable rule:line-length
     # Use simple http server on scheduler for health checks
     # See https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/logging-monitoring/check-health.html#scheduler-health-check-server
@@ -77,10 +83,16 @@ x-airflow-common:
     # The following line can be used to set a custom config file, stored in the local config folder
     AIRFLOW_CONFIG: '/opt/airflow/config/airflow.cfg'
   volumes:
-    - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
-    - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
-    - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
-    - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
+  # Airflow-specific directories.
+  - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
+  - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
+  - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
+  - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
+
+  # Netflix data-engineering application.
+  - ${AIRFLOW_PROJ_DIR:-.}/src:/opt/airflow/project/src
+  - ${AIRFLOW_PROJ_DIR:-.}/sql:/opt/airflow/project/sql
+  - ${AIRFLOW_PROJ_DIR:-.}/data:/opt/airflow/project/data
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
     &airflow-common-depends-on

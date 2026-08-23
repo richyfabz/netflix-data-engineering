@@ -1,13 +1,9 @@
 """End-to-end production transformation pipeline coordinator."""
 
 from src.batch_tracker import (
-    mark_batch_running,
-    mark_batch_success,
-    mark_batch_failed,
     get_batch_metadata,
     validate_batch,
 )
-
 from src.pipeline_control import (
     mark_pipeline_running,
     mark_pipeline_success,
@@ -45,18 +41,15 @@ def run_transformation_pipeline(
     validate_batch(
         credits_batch_id
     )
-    # Mark the overall pipeline and participating batches as active.
+    # Mark the transformation pipeline as active.
+#
+# Source batch status is owned by the ingestion layer and must not be
+# rewritten by downstream OLTP, OLAP, or quality processing.
     mark_pipeline_running(
-        PIPELINE_NAME
+    PIPELINE_NAME
     )
 
-    mark_batch_running(
-        titles_batch_id
-    )
-
-    mark_batch_running(
-        credits_batch_id
-    )
+  
 
     try:
 
@@ -113,14 +106,7 @@ def run_transformation_pipeline(
         )
 
 
-        # Mark both source batches as successfully processed.
-        mark_batch_success(
-            titles_batch_id
-        )
-
-        mark_batch_success(
-            credits_batch_id
-        )
+       
 
 
         # Advance the pipeline checkpoint only after every stage succeeds.
@@ -141,24 +127,20 @@ def run_transformation_pipeline(
 
 
     except Exception as error:
+        """
+        Preserve the successful source-ingestion history when a downstream
+        transformation fails.
 
-        # Persist failure against both participating source batches.
-        mark_batch_failed(
-            titles_batch_id,
-            error,
-        )
+        The pipeline control record owns transformation failures. The source
+        batches remain unchanged so they can be diagnosed or safely retried.
+        """
 
-        mark_batch_failed(
-            credits_batch_id,
-            error,
-        )
-
-
-        # Mark the pipeline failed without advancing its checkpoint.
+        # Record the transformation failure without advancing the
+        # last-successful pipeline checkpoint.
         mark_pipeline_failed(
             PIPELINE_NAME
         )
 
-
-        # Preserve the original exception for Airflow.
+        # Re-raise the original exception so Airflow also marks the
+        # current task and DAG run as failed.
         raise

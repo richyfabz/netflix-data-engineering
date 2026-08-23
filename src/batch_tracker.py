@@ -92,32 +92,6 @@ def register_batch(
     return batch_id
 
 # Mark a registered batch as actively processing.
-def mark_batch_running(batch_id):
-    """
-    Change a batch from RECEIVED to RUNNING.
-    """
-
-    # Connect to PostgreSQL using the ETL account.
-    with get_etl_connection() as connection:
-
-        # Open a cursor for the state update.
-        with connection.cursor() as cursor:
-
-            # Record that processing has started.
-            cursor.execute(
-                """
-                UPDATE etl.batch_history
-                SET
-                    status = 'RUNNING',
-                    processing_started_at = CURRENT_TIMESTAMP
-                WHERE batch_id = %s;
-                """,
-                (batch_id,),
-            )
-
-        # Save the state change.
-        connection.commit()
-
 
 """Batch tracking utilities for the Netflix ETL pipeline."""
 
@@ -251,3 +225,65 @@ def validate_batch(batch_id):
         )
 
     return batch_metadata
+
+
+def recover_stale_batches(
+    pipeline_name,
+    stale_after_minutes=60,
+):
+    """
+    Mark abandoned RUNNING batches as FAILED.
+
+    A batch is considered stale when it has remained in RUNNING state
+    longer than the configured threshold without a completion timestamp.
+
+    Active or recently started batches are left unchanged.
+    """
+
+    # Validate the threshold before using it in the database query.
+    if stale_after_minutes <= 0:
+        raise ValueError(
+            "stale_after_minutes must be greater than zero."
+        )
+
+    with get_etl_connection() as connection:
+        with connection.cursor() as cursor:
+
+            # Identify and fail batches that exceeded the allowed
+            # RUNNING duration without completing.
+            cursor.execute(
+                """
+                UPDATE etl.batch_history
+
+                SET
+                    status = 'FAILED',
+                    processing_completed_at = CURRENT_TIMESTAMP,
+                    error_message = (
+                        'Batch automatically marked FAILED because it '
+                        'remained RUNNING beyond the stale threshold.'
+                    )
+
+                WHERE pipeline_name = %(pipeline_name)s
+                  AND status = 'RUNNING'
+                  AND processing_completed_at IS NULL
+                  AND processing_started_at
+                      < CURRENT_TIMESTAMP
+                        - (%(stale_after_minutes)s * INTERVAL '1 minute')
+
+                RETURNING
+                    batch_id,
+                    file_name,
+                    processing_started_at;
+                """,
+                {
+                    "pipeline_name": pipeline_name,
+                    "stale_after_minutes": stale_after_minutes,
+                },
+            )
+
+            recovered_batches = cursor.fetchall()
+
+        # Persist the recovery changes.
+        connection.commit()
+
+    return recovered_batches
