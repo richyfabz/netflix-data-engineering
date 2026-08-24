@@ -35,3 +35,10 @@ data/processed/*
 # Keep raw directory structure
 !data/raw/.gitkeep
 !data/processed/.gitkeep
+
+# Runtime source and archived data
+data/incoming/*
+!data/incoming/.gitkeep
+
+data/archive/*
+!data/archive/.gitkeep

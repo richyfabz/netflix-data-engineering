@@ -125,9 +125,44 @@ def mark_batch_running(batch_id):
         connection.commit()
 
 
-def mark_batch_success(batch_id):
-    """Mark a batch as successfully processed."""
+def mark_batch_success(
+    batch_id,
+    rows_processed=None,
+):
+    """
+    Mark a batch as successfully ingested.
 
+    rows_processed records how many source rows were successfully
+    written into staging.
+    """
+
+    with get_etl_connection() as connection:
+        with connection.cursor() as cursor:
+
+            # Complete the ingestion lifecycle and retain the existing
+            # row count when no replacement value is supplied.
+            cursor.execute(
+                """
+                UPDATE etl.batch_history
+
+                SET
+                    status = 'SUCCESS',
+                    rows_processed = COALESCE(
+                        %(rows_processed)s,
+                        rows_processed
+                    ),
+                    processing_completed_at = CURRENT_TIMESTAMP,
+                    error_message = NULL
+
+                WHERE batch_id = %(batch_id)s;
+                """,
+                {
+                    "batch_id": batch_id,
+                    "rows_processed": rows_processed,
+                },
+            )
+
+        connection.commit()
     with get_etl_connection() as connection:
         with connection.cursor() as cursor:
 
