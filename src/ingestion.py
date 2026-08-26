@@ -5,115 +5,94 @@ This module validates incoming CSV structure and loads source records
 into PostgreSQL staging tables.
 """
 
-# Import csv for reading CSV source files.
 import csv
 
-# Import Path for filesystem operations.
 from pathlib import Path
 
-# Import the shared PostgreSQL connection helper.
 from src.database import get_etl_connection
 
+from src.schema_contract import (
+    TITLE_SCHEMA,
+    CREDIT_SCHEMA,
+    TITLE_SCHEMA_VERSION,
+    CREDIT_SCHEMA_VERSION,
+    validate_schema_contract,
+    detect_datatype_drift,
+    calculate_file_checksum,
+)
 
-# Define the source columns expected from titles.csv.
-TITLE_COLUMNS = [
-    "id",
-    "title",
-    "type",
-    "description",
-    "release_year",
-    "age_certification",
-    "runtime",
-    "genres",
-    "production_countries",
-    "seasons",
-    "imdb_id",
-    "imdb_score",
-    "imdb_votes",
-    "tmdb_popularity",
-    "tmdb_score",
-]
 
-# Define the source columns expected from credits.csv.
-CREDIT_COLUMNS = [
-    "person_id",
-    "id",
-    "name",
-    "character",
-    "role",
-]
-# Read and validate a CSV source file.
-def read_source_csv(file_path, expected_columns):
+def read_source_csv(
+    file_path,
+    expected_schema,
+    schema_version,
+):
     """
-    Read a CSV file after validating its expected columns.
+    Read and validate a CSV source file before staging.
     """
 
-    # Convert the supplied file location into a Path object.
     file_path = Path(file_path)
 
-    # Stop if the source file cannot be found.
     if not file_path.exists():
         raise FileNotFoundError(
             f"Source file does not exist: {file_path}"
         )
+    file_checksum = calculate_file_checksum(file_path)
 
-    # Open the CSV using UTF-8 encoding.
     with file_path.open(
         mode="r",
         encoding="utf-8",
         newline="",
     ) as source_file:
 
-        # Read each CSV row as a dictionary.
         reader = csv.DictReader(source_file)
 
-        # Retrieve the actual source columns.
         actual_columns = reader.fieldnames or []
 
-        # Identify any required columns missing from the source.
-        missing_columns = [
-            column
-            for column in expected_columns
-            if column not in actual_columns
-        ]
-
-        # Prevent ingestion when the source schema is unexpected.
-        if missing_columns:
-            raise ValueError(
-                f"Missing source columns: {missing_columns}"
-            )
-
-        # Materialise the validated records.
+        # Validate missing and added columns.
+        validate_schema_contract(
+            file_name=file_path.name,
+            actual_columns=actual_columns,
+            expected_schema=expected_schema,
+            file_checksum=file_checksum,
+            schema_version=schema_version,
+        )
         rows = list(reader)
 
-    # Return all validated source records.
+    # Validate source values against expected datatypes.
+        detect_datatype_drift(
+            file_name=file_path.name,
+            rows=rows,
+            expected_schema=expected_schema,
+            file_checksum=file_checksum,
+            schema_version=schema_version,
+    )
+
     return rows
 
 
-# Load one titles batch into raw staging.
-def load_titles_to_staging(file_path, batch_id):
+def load_titles_to_staging(
+    file_path,
+    batch_id,
+):
     """
     Load titles.csv into staging.titles_raw.
-
-    Returns the number of staged records.
     """
 
-    # Read and validate the source data.
+    # Validate the source before staging.
     rows = read_source_csv(
-        file_path,
-        TITLE_COLUMNS,
-    )
+    file_path,
+    TITLE_SCHEMA,
+    TITLE_SCHEMA_VERSION,
+)
 
-    # Preserve the source filename for lineage.
     source_file = Path(file_path).name
 
-    # Connect using the dedicated ETL account.
     with get_etl_connection() as connection:
 
-        # Open a PostgreSQL cursor.
         with connection.cursor() as cursor:
 
-            # Remove an incomplete previous staging attempt for this batch.
+            # Remove any incomplete previous load for this batch.
             cursor.execute(
                 """
                 DELETE FROM staging.titles_raw
@@ -122,7 +101,6 @@ def load_titles_to_staging(file_path, batch_id):
                 (batch_id,),
             )
 
-            # Insert each validated source row.
             for row in rows:
 
                 cursor.execute(
@@ -174,36 +152,34 @@ def load_titles_to_staging(file_path, batch_id):
                         source_file,
                     ),
                 )
-    
-        # Save the complete staging transaction.
+
         connection.commit()
 
-    # Return the number of records loaded.
     return len(rows)
-# Load one credits batch into raw staging.
-def load_credits_to_staging(file_path, batch_id):
+
+
+def load_credits_to_staging(
+    file_path,
+    batch_id,
+):
     """
     Load credits.csv into staging.credits_raw.
-
-    Returns the number of staged records.
     """
 
-    # Read and validate the source data.
+    # Validate the source before staging.
     rows = read_source_csv(
         file_path,
-        CREDIT_COLUMNS,
+        CREDIT_SCHEMA,
+        CREDIT_SCHEMA_VERSION,
     )
 
-    # Preserve the original source filename for lineage.
     source_file = Path(file_path).name
 
-    # Connect using the dedicated ETL account.
     with get_etl_connection() as connection:
 
-        # Open a PostgreSQL cursor.
         with connection.cursor() as cursor:
 
-            # Remove a previous incomplete load for this same batch.
+            # Remove any incomplete previous load for this batch.
             cursor.execute(
                 """
                 DELETE FROM staging.credits_raw
@@ -212,7 +188,6 @@ def load_credits_to_staging(file_path, batch_id):
                 (batch_id,),
             )
 
-            # Insert each validated credit record.
             for row in rows:
 
                 cursor.execute(
@@ -242,8 +217,6 @@ def load_credits_to_staging(file_path, batch_id):
                     ),
                 )
 
-        # Save the full batch.
         connection.commit()
 
-    # Return the number of staged records.
     return len(rows)

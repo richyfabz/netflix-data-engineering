@@ -1,0 +1,15 @@
+id,title,type,description,release_year,age_certification,runtime,genres,production_countries,seasons,imdb_id,imdb_score,imdb_votes,tmdb_popularity,tmdb_score
+ts_test_001,Harbour Lights,MOVIE,A retired sailor investigates a mystery in a coastal town.,2021,PG-13,108,['drama'],['GB'],,tt9000001,7.5,19000,19.8,7.2
+ts_test_002,Lagos After Dark,MOVIE,A journalist follows a late-night story across Lagos.,2022,R,116,"['thriller', 'drama', 'crime']","['NG', 'GB']",,tt9000002,7.0,11800,27.1,6.9
+ts_test_003,Orbit Seven,SHOW,A research crew discovers a signal beyond the moon.,2020,TV-14,48,"['scifi', 'thriller']","['US', 'CA']",3,tt9000003,8.2,47000,64.5,8.0
+ts_test_004,Weekend Kitchen,SHOW,Home cooks compete in regional food challenges.,2023,TV-PG,42,"['reality', 'family']",['US'],2,tt9000004,6.3,5600,15.2,6.6
+ts_test_005,The Last Archive,MOVIE,An archivist uncovers documents connected to a forgotten case.,2019,PG-13,101,"['history', 'drama']",['FR'],,tt9000005,7.9,23500,21.0,7.6
+ts_test_006,Midnight Transit,MOVIE,Strangers become trapped on the final train of the night.,2024,R,97,"['thriller', 'crime']",['JP'],,tt9000006,6.7,8500,40.1,7.1
+ts_test_007,Tiny Giants,SHOW,A nature series exploring small animals with extraordinary abilities.,2021,TV-G,30,"['documentation', 'family']",['AU'],1,tt9000007,8.4,9900,12.0,8.2
+ts_test_008,Second Serve,MOVIE,An ageing tennis coach returns to competition.,2020,PG,104,"['sport', 'drama']",['ES'],,tt9000008,7.2,6600,13.8,7.0
+ts_test_009,Paper Kingdom,MOVIE,Two siblings build an imaginary kingdom during a difficult summer.,2018,PG,95,"['family', 'fantasy']","['IE', 'GB']",,tt9000009,7.1,4400,10.1,7.2
+ts_test_010,Signals,SHOW,Emergency operators handle unusual calls from around the city.,2024,TV-MA,52,"['drama', 'thriller']",['KR'],1,tt9000010,7.6,2100,46.0,7.5
+ts_test_011,Neon Strings,MOVIE,A struggling guitarist joins an experimental music collective.,2023,R,110,"['music', 'drama']",['DE'],,tt9000011,6.9,3700,18.4,6.8
+ts_test_012,Red Earth,MOVIE,A family returns home during a severe drought.,2022,PG-13,112,['drama'],['ZA'],,tt9000012,7.3,7800,12.7,7.1
+ts_test_013,Glass Horizon,MOVIE,A mountaineer and photographer attempt a winter crossing.,2025,PG-13,121,"['drama', 'adventure']",['NO'],,tt9000013,7.7,1800,23.6,7.8
+ts_test_014,Code Blue,SHOW,A hospital technology team responds to system failures during emergencies.,2025,TV-14,45,['drama'],['US'],1,tt9000014,7.2,950,31.4,7.3

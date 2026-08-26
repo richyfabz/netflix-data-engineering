@@ -1,0 +1,41 @@
+person_id,id,name,character,role
+990001,ts_test_001,Eleanor Price,Mara,ACTOR
+990002,ts_test_001,Daniel Ford,Evan,ACTOR
+990003,ts_test_001,Maya Chen,,DIRECTOR
+990004,ts_test_002,Tobi Akinwale,Kunle,ACTOR
+990005,ts_test_002,Amara Okoye,Nneka,ACTOR
+990006,ts_test_002,Kemi Bello,,DIRECTOR
+990007,ts_test_003,Nora Hayes,Dr. Lane,ACTOR
+990008,ts_test_003,Marcus Reed,Cole,ACTOR
+990009,ts_test_003,Jonas Meyer,,DIRECTOR
+990010,ts_test_004,Leah Grant,Host,ACTOR
+990011,ts_test_004,Sofia Mendes,,DIRECTOR
+990012,ts_test_005,Claire Dubois,Elise,ACTOR
+990013,ts_test_005,Hugo Martin,Paul,ACTOR
+990014,ts_test_005,Nadia Laurent,,DIRECTOR
+990015,ts_test_006,Haruto Sato,Ren,ACTOR
+990016,ts_test_006,Mika Ito,Aya,ACTOR
+990017,ts_test_006,Ken Watan,,DIRECTOR
+990018,ts_test_007,Emma Walsh,Narrator,ACTOR
+990019,ts_test_007,Olivia Hart,,DIRECTOR
+990020,ts_test_008,Luis Ortega,Mateo,ACTOR
+990021,ts_test_008,Ana Ruiz,Sofia,ACTOR
+990022,ts_test_008,Carlos Vega,,DIRECTOR
+990023,ts_test_009,Fiona Kelly,Maeve,ACTOR
+990024,ts_test_009,Sean Byrne,Finn,ACTOR
+990025,ts_test_009,Aisling Moore,,DIRECTOR
+990026,ts_test_010,Ji-ho Park,Min,ACTOR
+990027,ts_test_010,Seo-yeon Kim,Yuna,ACTOR
+990028,ts_test_010,Han Lee,,DIRECTOR
+990029,ts_test_011,Lena Fischer,Eva,ACTOR
+990030,ts_test_011,Max Braun,Noah,ACTOR
+990031,ts_test_011,Greta Klein,,DIRECTOR
+990032,ts_test_012,Thandi Ndlovu,Naledi,ACTOR
+990033,ts_test_012,Sipho Dlamini,Thabo,ACTOR
+990034,ts_test_012,Zola Khumalo,,DIRECTOR
+990035,ts_test_013,Ingrid Solberg,Liv,ACTOR
+990036,ts_test_013,Erik Dahl,Jon,ACTOR
+990037,ts_test_013,Maren Vik,,DIRECTOR
+990038,ts_test_014,Ava Brooks,Dr. Cole,ACTOR
+990039,ts_test_014,Noah Price,Eli,ACTOR
+990040,ts_test_014,Rina Patel,,DIRECTOR

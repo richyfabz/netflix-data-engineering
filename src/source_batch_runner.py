@@ -20,11 +20,17 @@ from src.batch_tracker import (
 from src.file_utils import calculate_file_checksum
 
 from src.ingestion import (
-    TITLE_COLUMNS,
-    CREDIT_COLUMNS,
     read_source_csv,
     load_titles_to_staging,
     load_credits_to_staging,
+)
+
+from src.schema_contract import (
+    TITLE_SCHEMA,
+    CREDIT_SCHEMA,
+    TITLE_SCHEMA_VERSION,
+    CREDIT_SCHEMA_VERSION,
+
 )
 
 
@@ -79,14 +85,17 @@ def ingest_incoming_batch():
     # Validate source structure before registering batches
     # ---------------------------------------------------------------------
 
+    # Validate both source files before batch registration.
     title_rows = read_source_csv(
-        titles_path,
-        TITLE_COLUMNS,
+    titles_path,
+    TITLE_SCHEMA,
+    TITLE_SCHEMA_VERSION,
     )
 
     credit_rows = read_source_csv(
-        credits_path,
-        CREDIT_COLUMNS,
+    credits_path,
+    CREDIT_SCHEMA,
+    CREDIT_SCHEMA_VERSION,
     )
 
     if not title_rows:
