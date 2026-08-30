@@ -10,7 +10,7 @@
 --   - How many batches succeeded or failed?
 --   - Are there recent quality-check failures?
 
-CREATE OR REPLACE VIEW serving.pipeline_health AS
+CREATE OR REPLACE VIEW production.pipeline_health AS
 WITH batch_summary AS (
     SELECT
         pipeline_name,

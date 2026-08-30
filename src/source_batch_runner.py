@@ -3,19 +3,13 @@ Automatic source-batch ingestion for the Netflix pipeline.
 
 This module detects a new titles.csv + credits.csv pair, validates the files,
 prevents duplicate ingestion using checksums, registers ETL batches, and loads
-the source records into PostgreSQL staging.
+the source records into PostgreSQL dev.
 """
 
 from pathlib import Path
 import shutil
 
-from src.batch_tracker import (
-    find_successful_batch_by_checksum,
-    register_batch,
-    mark_batch_running,
-    mark_batch_success,
-    mark_batch_failed,
-)
+from src.batch_tracker import (find_successful_batch_by_checksum,register_batches,mark_batch_running, mark_batch_success, mark_batch_failed)
 
 from src.file_utils import calculate_file_checksum
 
@@ -147,19 +141,24 @@ def ingest_incoming_batch():
     # Register both source batches
     # ---------------------------------------------------------------------
 
-    titles_batch_id = register_batch(
-        pipeline_name=PIPELINE_NAME,
-        file_name="titles.csv",
-        file_checksum=titles_checksum,
-        rows_received=len(title_rows),
-    )
+    batch_ids = register_batches(
+    [
+        {
+            "pipeline_name": PIPELINE_NAME,
+            "file_name": "titles.csv",
+            "file_checksum": titles_checksum,
+            "rows_received": len(title_rows),
+        },
+        {
+            "pipeline_name": PIPELINE_NAME,
+            "file_name": "credits.csv",
+            "file_checksum": credits_checksum,
+            "rows_received": len(credit_rows),
+        },
+    ]
+)
 
-    credits_batch_id = register_batch(
-        pipeline_name=PIPELINE_NAME,
-        file_name="credits.csv",
-        file_checksum=credits_checksum,
-        rows_received=len(credit_rows),
-    )
+    titles_batch_id, credits_batch_id = batch_ids
 
     # Mark both batches as actively ingesting.
     mark_batch_running(

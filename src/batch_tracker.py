@@ -10,21 +10,15 @@ from src.database import get_etl_connection
 
 
 # Check whether a successfully processed file has already been seen.
-def find_successful_batch_by_checksum(file_checksum):
-    """
-    Return an existing successful batch when the checksum already exists.
+def find_successful_batch_by_checksum(file_checksum):                       #  Return an existing successful batch when the checksum already exists.
+  
 
-    Returns None when the file has not previously completed successfully.
-    """
-
-    # Open the ETL database connection.
     with get_etl_connection() as connection:
 
-        # Open a cursor for the duplicate lookup.
         with connection.cursor() as cursor:
 
-            # Search only successful batches with the same checksum.
-            cursor.execute(
+           
+            cursor.execute(                                  # Search only successful batches with the same checksum.
                 """
                 SELECT
                     batch_id,
@@ -44,65 +38,50 @@ def find_successful_batch_by_checksum(file_checksum):
             return cursor.fetchone()
 
 
-# Register a newly discovered incoming batch.
-def register_batch(
-    pipeline_name,
-    file_name,
-    file_checksum,
-    rows_received,
-):
+def register_batches(batches):                          # Register multiple source batches in one transaction
+    query = """
+        INSERT INTO etl.batch_history (
+            pipeline_name,
+            file_name,
+            file_checksum,
+            rows_received,
+            status
+        )
+        VALUES (%s, %s, %s, %s, 'RECEIVED')
+        RETURNING batch_id;
     """
-    Register a new batch and return its generated batch ID.
-    """
 
-    # Open the ETL database connection.
-    with get_etl_connection() as connection:
+    batch_ids = []
 
-        # Open a cursor for the insert.
-        with connection.cursor() as cursor:
-
-            # Insert the incoming batch before processing begins.
+    with get_etl_connection() as conn, conn.cursor() as cursor:
+        for batch in batches:
             cursor.execute(
-                """
-                INSERT INTO etl.batch_history (
-                    pipeline_name,
-                    file_name,
-                    file_checksum,
-                    rows_received,
-                    status
-                )
-                VALUES (%s, %s, %s, %s, 'RECEIVED')
-                RETURNING batch_id;
-                """,
+                query,
                 (
-                    pipeline_name,
-                    file_name,
-                    file_checksum,
-                    rows_received,
+                    batch["pipeline_name"],
+                    batch["file_name"],
+                    batch["file_checksum"],
+                    batch["rows_received"],
                 ),
             )
 
-            # Retrieve PostgreSQL's generated batch identifier.
-            batch_id = cursor.fetchone()[0]
+            batch_ids.append(cursor.fetchone()[0])
 
-        # Commit the new batch registration.
-        connection.commit()
+        conn.commit()
 
-    # Return the identifier so downstream tasks know which batch they own.
-    return batch_id
+    return batch_ids
 
-# Mark a registered batch as actively processing.
 
-"""Batch tracking utilities for the Netflix ETL pipeline."""
 
-def mark_batch_running(batch_id):
+                                                                # Mark a registered batch as actively processing.
+def mark_batch_running(batch_id):                               # Batch tracking utilities for the Netflix ETL pipeline
     """Mark a registered batch as actively processing."""
 
     with get_etl_connection() as connection:
         with connection.cursor() as cursor:
 
-            # Record when processing begins and clear any old error.
-            cursor.execute(
+         
+            cursor.execute(                                    # Record when processing begins and clear any old error.
                 """
                 UPDATE etl.batch_history
 
@@ -118,29 +97,21 @@ def mark_batch_running(batch_id):
                 WHERE batch_id = %(batch_id)s;
                 """,
                 {
-                    "batch_id": batch_id,
+                    "batch_id": batch_id
                 },
             )
 
         connection.commit()
 
 
-def mark_batch_success(
-    batch_id,
-    rows_processed=None,
-):
-    """
-    Mark a batch as successfully ingested.
-
-    rows_processed records how many source rows were successfully
-    written into staging.
-    """
-
+def mark_batch_success(batch_id,rows_processed=None):       # Mark a batch as successfully ingested.rows_processed records
+                                                             # how many source rows were successfully written into dev.
+     
     with get_etl_connection() as connection:
         with connection.cursor() as cursor:
 
-            # Complete the ingestion lifecycle and retain the existing
-            # row count when no replacement value is supplied.
+                                                            # Complete the ingestion lifecycle and retain the existing
+                                                            # row count when no replacement value is supplied.
             cursor.execute(
                 """
                 UPDATE etl.batch_history
@@ -158,7 +129,7 @@ def mark_batch_success(
                 """,
                 {
                     "batch_id": batch_id,
-                    "rows_processed": rows_processed,
+                    "rows_processed": rows_processed
                 },
             )
 
@@ -166,8 +137,7 @@ def mark_batch_success(
     with get_etl_connection() as connection:
         with connection.cursor() as cursor:
 
-            # Complete the batch lifecycle only after all pipeline stages pass.
-            cursor.execute(
+            cursor.execute(                                 # Complete the batch lifecycle only after all pipeline stages pass.
                 """
                 UPDATE etl.batch_history
 
@@ -179,21 +149,20 @@ def mark_batch_success(
                 WHERE batch_id = %(batch_id)s;
                 """,
                 {
-                    "batch_id": batch_id,
+                    "batch_id": batch_id
                 },
             )
 
         connection.commit()
 
 
-def mark_batch_failed(batch_id, error_message):
-    """Record a failed batch and preserve the failure reason."""
+def mark_batch_failed(batch_id, error_message):             # Record a failed batch and preserve the failure reason
 
     with get_etl_connection() as connection:
         with connection.cursor() as cursor:
 
-            # Persist the failure so the batch can be diagnosed later.
-            cursor.execute(
+            
+            cursor.execute(                             # Persist the failure so the batch can be diagnosed later.
                 """
                 UPDATE etl.batch_history
 
@@ -206,7 +175,7 @@ def mark_batch_failed(batch_id, error_message):
                 """,
                 {
                     "batch_id": batch_id,
-                    "error_message": str(error_message),
+                    "error_message": str(error_message)
                 },
             )
 
@@ -217,9 +186,8 @@ def get_batch_metadata(batch_id):
 
     with get_etl_connection() as connection:
         with connection.cursor() as cursor:
-
-            # Retrieve the batch fields required by pipeline control.
-            cursor.execute(
+            
+            cursor.execute(                                     # Retrieve the batch fields required by pipeline control.
                 """
                 SELECT
                     batch_id,
@@ -232,14 +200,13 @@ def get_batch_metadata(batch_id):
                 WHERE batch_id = %(batch_id)s;
                 """,
                 {
-                    "batch_id": batch_id,
+                    "batch_id": batch_id
                 },
             )
 
             return cursor.fetchone()
 
-def validate_batch(batch_id):
-    """Validate that a registered batch exists and contains source rows."""
+def validate_batch(batch_id):                               # Validate that a registered batch exists and contains source rows
 
     batch_metadata = get_batch_metadata(
         batch_id
@@ -262,10 +229,7 @@ def validate_batch(batch_id):
     return batch_metadata
 
 
-def recover_stale_batches(
-    pipeline_name,
-    stale_after_minutes=60,
-):
+def recover_stale_batches(pipeline_name, stale_after_minutes=60):
     """
     Mark abandoned RUNNING batches as FAILED.
 
@@ -312,7 +276,7 @@ def recover_stale_batches(
                 """,
                 {
                     "pipeline_name": pipeline_name,
-                    "stale_after_minutes": stale_after_minutes,
+                    "stale_after_minutes": stale_after_minutes
                 },
             )
 

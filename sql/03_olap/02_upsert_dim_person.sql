@@ -2,7 +2,7 @@
 -- Incrementally upsert people from OLTP into the analytics dimension.
 -- ============================================================================
 
-INSERT INTO analytics.dim_person (
+INSERT INTO uat_olap.dim_person (
     person_sk,
     person_id,
     name
@@ -11,14 +11,14 @@ INSERT INTO analytics.dim_person (
 SELECT
     COALESCE(
         existing.person_sk,
-        nextval('analytics.dim_person_sk_seq')
+        nextval('uat_olap.dim_person_sk_seq')
     ),
     p.person_id,
     p.name
 
-FROM public.person AS p
+FROM uat_oltp.person AS p
 
-LEFT JOIN analytics.dim_person AS existing
+LEFT JOIN uat_olap.dim_person AS existing
     ON existing.person_id = p.person_id
 
 ON CONFLICT (person_id)

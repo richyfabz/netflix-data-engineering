@@ -2,7 +2,7 @@
 -- Incrementally upsert the title dimension from OLTP + current staging batch.
 -- ============================================================================
 
-INSERT INTO analytics.dim_title (
+INSERT INTO uat_olap.dim_title (
     title_sk,
     title_id,
     title_name,
@@ -14,7 +14,7 @@ INSERT INTO analytics.dim_title (
 SELECT
     COALESCE(
         existing.title_sk,
-        nextval('analytics.dim_title_sk_seq')
+        nextval('uat_olap.dim_title_sk_seq')
     ) AS title_sk,
 
     t.title_id,
@@ -28,13 +28,13 @@ SELECT
         ELSE s.release_year::INTEGER
     END AS release_year
 
-FROM public.title AS t
+FROM uat_oltp.title AS t
 
-INNER JOIN staging.titles_raw AS s
+INNER JOIN dev.titles_raw AS s
     ON s.id = t.title_id
    AND s.batch_id = %(batch_id)s
 
-LEFT JOIN analytics.dim_title AS existing
+LEFT JOIN uat_olap.dim_title AS existing
     ON existing.title_id = t.title_id
 
 WHERE t.title_id IS NOT NULL

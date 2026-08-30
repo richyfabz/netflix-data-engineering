@@ -2,7 +2,7 @@
 -- Incrementally upsert genres from OLTP into the analytics dimension.
 -- ============================================================================
 
-INSERT INTO analytics.dim_genre (
+INSERT INTO uat_olap.dim_genre (
     genre_sk,
     genre_id,
     name
@@ -11,14 +11,14 @@ INSERT INTO analytics.dim_genre (
 SELECT
     COALESCE(
         existing.genre_sk,
-        nextval('analytics.dim_genre_sk_seq')
+        nextval('uat_olap.dim_genre_sk_seq')
     ),
     g.genre_id,
     g.name
 
-FROM public.genre AS g
+FROM uat_oltp.genre AS g
 
-LEFT JOIN analytics.dim_genre AS existing
+LEFT JOIN uat_olap.dim_genre AS existing
     ON existing.genre_id = g.genre_id
 
 ON CONFLICT (genre_id)

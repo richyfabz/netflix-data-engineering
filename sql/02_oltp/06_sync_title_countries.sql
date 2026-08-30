@@ -7,8 +7,8 @@
 
 
 -- Remove previous country relationships for titles in the current batch.
-DELETE FROM public.title_country AS tc
-USING staging.titles_raw AS s
+DELETE FROM uat_oltp.title_country AS tc
+USING dev.titles_raw AS s
 
 WHERE tc.title_id = s.id
   AND s.batch_id = %(batch_id)s;
@@ -37,7 +37,7 @@ WITH parsed_countries AS (
             )
         ) AS country_name
 
-    FROM staging.titles_raw AS s
+    FROM dev.titles_raw AS s
 
     CROSS JOIN LATERAL
         UNNEST(
@@ -54,7 +54,7 @@ WITH parsed_countries AS (
 
 
 -- Rebuild title-to-country relationships from the latest source state.
-INSERT INTO public.title_country (
+INSERT INTO uat_oltp.title_country (
     title_id,
     country_id
 )
@@ -65,10 +65,10 @@ SELECT
 
 FROM parsed_countries AS pc
 
-INNER JOIN public.title AS t
+INNER JOIN uat_oltp.title AS t
     ON t.title_id = pc.title_id
 
-INNER JOIN public.country AS c
+INNER JOIN uat_oltp.country AS c
     ON c.name = pc.country_name
 
 WHERE pc.country_name IS NOT NULL

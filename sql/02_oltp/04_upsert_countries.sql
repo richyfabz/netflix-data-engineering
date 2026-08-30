@@ -17,7 +17,7 @@ WITH parsed_countries AS (
             )
         ) AS country_name
 
-    FROM staging.titles_raw
+    FROM dev.titles_raw
 
     CROSS JOIN LATERAL
         UNNEST(
@@ -29,7 +29,7 @@ WITH parsed_countries AS (
       AND production_countries <> ''
 )
 
-INSERT INTO country (
+INSERT INTO uat_oltp.country(
     name
 )
 

@@ -19,7 +19,7 @@ WITH parsed_genres AS (
             )
         ) AS genre_name
 
-    FROM staging.titles_raw
+    FROM dev.titles_raw
 
     CROSS JOIN LATERAL
         UNNEST(
@@ -31,7 +31,7 @@ WITH parsed_genres AS (
       AND genres <> ''
 )
 
-INSERT INTO genre (
+INSERT INTO uat_oltp.genre (
     name
 )
 

@@ -3,9 +3,9 @@
 -- ============================================================================
 
 -- Remove existing relationships for titles being refreshed.
-DELETE FROM analytics.bridge_title_genre AS bridge
-USING analytics.dim_title AS dt,
-      staging.titles_raw AS staging
+DELETE FROM uat_olap.bridge_title_genre AS bridge
+USING uat_olap.dim_title AS dt,
+      dev.titles_raw AS staging
 
 WHERE bridge.title_sk = dt.title_sk
   AND dt.title_id = staging.id
@@ -13,7 +13,7 @@ WHERE bridge.title_sk = dt.title_sk
 
 
 -- Rebuild relationships from the current OLTP state.
-INSERT INTO analytics.bridge_title_genre (
+INSERT INTO uat_olap.bridge_title_genre (
     title_sk,
     genre_sk
 )
@@ -22,15 +22,15 @@ SELECT DISTINCT
     dt.title_sk,
     dg.genre_sk
 
-FROM public.title_genre AS oltp_bridge
+FROM uat_oltp.title_genre AS oltp_bridge
 
-INNER JOIN analytics.dim_title AS dt
+INNER JOIN uat_olap.dim_title AS dt
     ON dt.title_id = oltp_bridge.title_id
 
-INNER JOIN analytics.dim_genre AS dg
+INNER JOIN uat_olap.dim_genre AS dg
     ON dg.genre_id = oltp_bridge.genre_id
 
-INNER JOIN staging.titles_raw AS staging
+INNER JOIN dev.titles_raw AS staging
     ON staging.id = oltp_bridge.title_id
    AND staging.batch_id = %(batch_id)s
 

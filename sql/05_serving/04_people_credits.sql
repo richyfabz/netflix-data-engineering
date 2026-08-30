@@ -9,7 +9,7 @@
 --   - How do actor and director portfolios compare?
 --   - Which people are associated with the most popular titles?
 
-CREATE OR REPLACE VIEW serving.people_credits AS
+CREATE OR REPLACE VIEW production.people_credits AS
 SELECT
     dp.person_sk,
     dp.person_id,
@@ -50,12 +50,12 @@ SELECT
         WHERE ftm.tmdb_score_imputed = TRUE
     ) AS imputed_tmdb_score_count
 
-FROM analytics.dim_person AS dp
+FROM uat_olap.dim_person AS dp
 
-INNER JOIN analytics.fact_credits AS fc
+INNER JOIN uat_olap.fact_credits AS fc
     ON fc.person_sk = dp.person_sk
 
-LEFT JOIN analytics.fact_title_metrics AS ftm
+LEFT JOIN uat_olap.fact_title_metrics AS ftm
     ON ftm.title_sk = fc.title_sk
 
 GROUP BY

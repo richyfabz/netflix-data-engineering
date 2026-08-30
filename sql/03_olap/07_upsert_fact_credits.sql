@@ -8,7 +8,7 @@
 -- OLAP surrogate keys through the dimensions.
 -- ============================================================
 
-INSERT INTO analytics.fact_credits (
+INSERT INTO uat_olap.fact_credits (
     title_sk,
     person_sk,
     role,
@@ -21,12 +21,12 @@ SELECT
     c.role,
     c.character
 
-FROM public.credit AS c
+FROM uat_oltp.credit AS c
 
-INNER JOIN analytics.dim_title AS dt
+INNER JOIN uat_olap.dim_title AS dt
     ON dt.title_id = c.title_id
 
-INNER JOIN analytics.dim_person AS dp
+INNER JOIN uat_olap.dim_person AS dp
     ON dp.person_id = c.person_id
 
 WHERE c.title_id IS NOT NULL

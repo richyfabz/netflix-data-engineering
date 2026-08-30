@@ -10,10 +10,10 @@ AUTHORIZATION netflix_etl;
 
 
 -- ============================================================
--- TABLE 1: staging.titles_raw
+-- TABLE 1: dev.titles_raw
 -- ============================================================
 
-CREATE TABLE IF NOT EXISTS staging.titles_raw (
+CREATE TABLE IF NOT EXISTS dev.titles_raw (
     batch_id BIGINT NOT NULL,
     id VARCHAR(50),
     title VARCHAR(500),
@@ -36,11 +36,11 @@ CREATE TABLE IF NOT EXISTS staging.titles_raw (
 
 
 -- ============================================================
--- TABLE 2: staging.credits_raw
+-- TABLE 2: dev.credits_raw
 -- ============================================================
 
 
-CREATE TABLE IF NOT EXISTS staging.credits_raw (
+CREATE TABLE IF NOT EXISTS dev.credits_raw (
     batch_id BIGINT NOT NULL,
     person_id VARCHAR(50),
     id VARCHAR(50),
@@ -59,14 +59,14 @@ CREATE TABLE IF NOT EXISTS staging.credits_raw (
 -- Improve batch-level lookups, cleanup and transformations
 -- for staged title records.
 CREATE INDEX IF NOT EXISTS idx_titles_raw_batch
-ON staging.titles_raw(batch_id);
+ON dev.titles_raw(batch_id);
 
 CREATE INDEX IF NOT EXISTS idx_credits_raw_batch
-ON staging.credits_raw(batch_id);
+ON dev.credits_raw(batch_id);
 
 
 CREATE INDEX IF NOT EXISTS idx_titles_raw_id
-ON staging.titles_raw(id);
+ON dev.titles_raw(id);
 
 CREATE INDEX IF NOT EXISTS idx_credits_raw_title_id
-ON staging.credits_raw(id);
+ON dev.credits_raw(id);

@@ -2,7 +2,7 @@
 -- Incrementally load unique title/person credit relationships.
 -- ============================================================================
 
-INSERT INTO public.credit (
+INSERT INTO uat_oltp.credit (
     title_id,
     person_id,
     role,
@@ -15,12 +15,12 @@ SELECT DISTINCT
     c.role,
     NULLIF(c.character, '') AS character
 
-FROM staging.credits_raw AS c
+FROM dev.credits_raw AS c
 
-INNER JOIN public.title AS t
+INNER JOIN uat_oltp.title AS t
     ON t.title_id = c.id
 
-INNER JOIN public.person AS p
+INNER JOIN uat_oltp.person AS p
     ON p.person_id = c.person_id::INTEGER
 
 WHERE c.batch_id = %(batch_id)s

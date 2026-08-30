@@ -8,7 +8,7 @@
 --   - Which genres perform best according to TMDB?
 --   - Which genres have the highest average popularity?
 
-CREATE OR REPLACE VIEW serving.genre_performance AS
+CREATE OR REPLACE VIEW production.genre_performance AS
 SELECT
     dg.genre_sk,
     dg.genre_id,
@@ -47,12 +47,12 @@ SELECT
         WHERE ftm.tmdb_score_imputed = TRUE
     ) AS imputed_tmdb_score_count
 
-FROM analytics.dim_genre AS dg
+FROM uat_olap.dim_genre AS dg
 
-LEFT JOIN analytics.bridge_title_genre AS btg
+LEFT JOIN uat_olap.bridge_title_genre AS btg
     ON btg.genre_sk = dg.genre_sk
 
-LEFT JOIN analytics.fact_title_metrics AS ftm
+LEFT JOIN uat_olap.fact_title_metrics AS ftm
     ON ftm.title_sk = btg.title_sk
 
 GROUP BY

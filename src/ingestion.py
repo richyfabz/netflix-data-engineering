@@ -11,25 +11,10 @@ from pathlib import Path
 
 from src.database import get_etl_connection
 
-from src.schema_contract import (
-    TITLE_SCHEMA,
-    CREDIT_SCHEMA,
-    TITLE_SCHEMA_VERSION,
-    CREDIT_SCHEMA_VERSION,
-    validate_schema_contract,
-    detect_datatype_drift,
-    calculate_file_checksum,
-)
+from src.schema_contract import (TITLE_SCHEMA, CREDIT_SCHEMA, TITLE_SCHEMA_VERSION, CREDIT_SCHEMA_VERSION,validate_schema_contract, detect_datatype_drift, coerce_expected_datatypes, calculate_file_checksum)
 
 
-def read_source_csv(
-    file_path,
-    expected_schema,
-    schema_version,
-):
-    """
-    Read and validate a CSV source file before staging.
-    """
+def read_source_csv(file_path, expected_schema, schema_version):            # Read and validate a CSV source file before dev.
 
     file_path = Path(file_path)
 
@@ -37,19 +22,15 @@ def read_source_csv(
         raise FileNotFoundError(
             f"Source file does not exist: {file_path}"
         )
+
     file_checksum = calculate_file_checksum(file_path)
 
-    with file_path.open(
-        mode="r",
-        encoding="utf-8",
-        newline="",
-    ) as source_file:
+    with file_path.open(mode="r", encoding="utf-8",newline="") as source_file:
 
         reader = csv.DictReader(source_file)
 
         actual_columns = reader.fieldnames or []
 
-        # Validate missing and added columns.
         validate_schema_contract(
             file_name=file_path.name,
             actual_columns=actual_columns,
@@ -57,34 +38,27 @@ def read_source_csv(
             file_checksum=file_checksum,
             schema_version=schema_version,
         )
+
         rows = list(reader)
 
-    # Validate source values against expected datatypes.
-        detect_datatype_drift(
-            file_name=file_path.name,
-            rows=rows,
-            expected_schema=expected_schema,
-            file_checksum=file_checksum,
-            schema_version=schema_version,
+    rows = coerce_expected_datatypes(file_name=file_path.name,rows=rows,expected_schema=expected_schema)
+
+    detect_datatype_drift(
+        file_name=file_path.name,
+        rows=rows,
+        expected_schema=expected_schema,
+        file_checksum=file_checksum,
+        schema_version=schema_version,
     )
 
     return rows
 
 
-def load_titles_to_staging(
-    file_path,
-    batch_id,
-):
-    """
-    Load titles.csv into staging.titles_raw.
-    """
+def load_titles_to_staging(file_path,batch_id):                                # Load titles.csv into dev.titles_raw.
 
-    # Validate the source before staging.
-    rows = read_source_csv(
-    file_path,
-    TITLE_SCHEMA,
-    TITLE_SCHEMA_VERSION,
-)
+    rows = read_source_csv( file_path, TITLE_SCHEMA, TITLE_SCHEMA_VERSION)     # Validate the source before dev. 
+    
+
 
     source_file = Path(file_path).name
 
@@ -92,10 +66,10 @@ def load_titles_to_staging(
 
         with connection.cursor() as cursor:
 
-            # Remove any incomplete previous load for this batch.
-            cursor.execute(
+            
+            cursor.execute(                               # Remove any incomplete previous load for this batch.
                 """
-                DELETE FROM staging.titles_raw
+                DELETE FROM dev.titles_raw
                 WHERE batch_id = %s;
                 """,
                 (batch_id,),
@@ -105,7 +79,7 @@ def load_titles_to_staging(
 
                 cursor.execute(
                     """
-                    INSERT INTO staging.titles_raw (
+                    INSERT INTO dev.titles_raw (
                         batch_id,
                         id,
                         title,
@@ -158,20 +132,10 @@ def load_titles_to_staging(
     return len(rows)
 
 
-def load_credits_to_staging(
-    file_path,
-    batch_id,
-):
-    """
-    Load credits.csv into staging.credits_raw.
-    """
-
-    # Validate the source before staging.
-    rows = read_source_csv(
-        file_path,
-        CREDIT_SCHEMA,
-        CREDIT_SCHEMA_VERSION,
-    )
+def load_credits_to_staging(file_path,batch_id):                            # Load credits.csv into dev.credits_raw.
+    
+   
+    rows = read_source_csv( file_path, CREDIT_SCHEMA, CREDIT_SCHEMA_VERSION)   # Validate the source before dev.
 
     source_file = Path(file_path).name
 
@@ -179,10 +143,10 @@ def load_credits_to_staging(
 
         with connection.cursor() as cursor:
 
-            # Remove any incomplete previous load for this batch.
-            cursor.execute(
+           
+            cursor.execute(                      # Remove any incomplete previous load for this batch.              
                 """
-                DELETE FROM staging.credits_raw
+                DELETE FROM dev.credits_raw
                 WHERE batch_id = %s;
                 """,
                 (batch_id,),
@@ -192,7 +156,7 @@ def load_credits_to_staging(
 
                 cursor.execute(
                     """
-                    INSERT INTO staging.credits_raw (
+                    INSERT INTO dev.credits_raw (
                         batch_id,
                         person_id,
                         id,

@@ -7,8 +7,8 @@
 
 
 -- Remove previous genre relationships for titles being refreshed.
-DELETE FROM public.title_genre AS tg
-USING staging.titles_raw AS s
+DELETE FROM uat_oltp.title_genre AS tg
+USING dev.titles_raw AS s
 
 WHERE tg.title_id = s.id
   AND s.batch_id = %(batch_id)s;
@@ -37,7 +37,7 @@ WITH parsed_genres AS (
             )
         ) AS genre_name
 
-    FROM staging.titles_raw AS s
+    FROM dev.titles_raw AS s
 
     CROSS JOIN LATERAL
         UNNEST(
@@ -54,7 +54,7 @@ WITH parsed_genres AS (
 
 
 -- Rebuild the current title-to-genre relationships.
-INSERT INTO public.title_genre (
+INSERT INTO uat_oltp.title_genre (
     title_id,
     genre_id
 )
@@ -65,10 +65,10 @@ SELECT
 
 FROM parsed_genres AS pg
 
-INNER JOIN public.title AS t
+INNER JOIN uat_oltp.title AS t
     ON t.title_id = pg.title_id
 
-INNER JOIN public.genre AS g
+INNER JOIN uat_oltp.genre AS g
     ON g.name = pg.genre_name
 
 WHERE pg.genre_name IS NOT NULL

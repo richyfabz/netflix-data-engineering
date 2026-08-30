@@ -5,7 +5,7 @@
 -- Purpose:
 -- Move one staged title batch into the normalised OLTP title table.
 
-INSERT INTO title (
+INSERT INTO uat_oltp.title (
     title_id,
     title_name,
     type,
@@ -35,7 +35,7 @@ SELECT
         ELSE seasons::NUMERIC::INTEGER
     END,
     NULLIF(imdb_id, '')
-FROM staging.titles_raw
+FROM dev.titles_raw
 WHERE batch_id = %(batch_id)s
 AND id IS NOT NULL
 AND id <> ''

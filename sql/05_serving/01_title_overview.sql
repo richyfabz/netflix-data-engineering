@@ -6,7 +6,7 @@
 -- indicators required for reporting and Power BI analysis.
 -- ============================================================================
 
-CREATE OR REPLACE VIEW serving.title_overview AS
+CREATE OR REPLACE VIEW production.title_overview AS
 SELECT
     dt.title_sk,
     dt.title_id,
@@ -22,6 +22,6 @@ SELECT
     ftm.imdb_votes_imputed,
     ftm.tmdb_score_imputed,
     ftm.tmdb_popularity_imputed
-FROM analytics.dim_title AS dt
-LEFT JOIN analytics.fact_title_metrics AS ftm
+FROM uat_olap.dim_title AS dt
+LEFT JOIN uat_olap.fact_title_metrics AS ftm
     ON ftm.title_sk = dt.title_sk;

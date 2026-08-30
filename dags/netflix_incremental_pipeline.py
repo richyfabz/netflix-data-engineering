@@ -23,11 +23,7 @@ from airflow.providers.standard.sensors.python import PythonSensor
 
 from src.batch_tracker import recover_stale_batches
 from src.pipeline_runner import run_transformation_pipeline
-from src.source_batch_runner import (
-    ingest_incoming_batch,
-    archive_incoming_batch,
-)
-
+from src.source_batch_runner import ( ingest_incoming_batch, archive_incoming_batch)
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -55,13 +51,13 @@ def recover_abandoned_batches():
 
     print(
         "Recovered stale batch count:",
-        len(recovered_batches),
+        len(recovered_batches)
     )
 
     for batch in recovered_batches:
         print(
             "Recovered stale batch:",
-            batch,
+            batch
         )
 
     return len(recovered_batches)
@@ -91,7 +87,7 @@ def ingest_new_source_batch():
 
     print(
         "Automatic ingestion result:",
-        ingestion_result,
+        ingestion_result
     )
 
     return ingestion_result
@@ -123,24 +119,21 @@ def execute_transformation(**context):
 
     print(
         "Running transformation with titles batch:",
-        titles_batch_id,
+        titles_batch_id
     )
 
     print(
         "Running transformation with credits batch:",
-        credits_batch_id,
+        credits_batch_id
     )
 
     # Reuse the production pipeline coordinator that already handles:
     # OLTP, OLAP, quality validation, batch states, and checkpoint management.
-    results = run_transformation_pipeline(
-        titles_batch_id=titles_batch_id,
-        credits_batch_id=credits_batch_id,
-    )
+    results = run_transformation_pipeline(titles_batch_id=titles_batch_id, credits_batch_id=credits_batch_id)
 
     print(
         "Transformation pipeline result:",
-        results,
+        results
     )
 
     return results
@@ -240,17 +233,18 @@ with DAG(
         "netflix",
         "etl",
         "incremental",
-        "data-engineering",
-    ],
+        "data-engineering"
+    ]
 ) as dag:
 
     
     wait_for_batch = PythonSensor(
     task_id="wait_for_source_batch",
     python_callable=source_batch_available,
-    poke_interval=10,
+    poke_interval=15,
     mode="reschedule",
-    timeout=60 * 60 * 24,
+    timeout=60 * 60 * 6,
+    soft_fail=True
 )
 
     # ------------------------------------------------------------------------
@@ -266,7 +260,7 @@ with DAG(
         retry_exponential_backoff=True,
         max_retry_delay=timedelta(minutes=5),
 
-        execution_timeout=timedelta(minutes=3),
+        execution_timeout=timedelta(minutes=3)
     )
 
     # ------------------------------------------------------------------------
@@ -282,8 +276,7 @@ with DAG(
         retry_delay=timedelta(minutes=1),
         retry_exponential_backoff=True,
         max_retry_delay=timedelta(minutes=5),
-
-        execution_timeout=timedelta(minutes=10),
+        execution_timeout=timedelta(minutes=10)
     )
 
         # Resolve the batch IDs created by the current ingestion run.
@@ -296,7 +289,7 @@ with DAG(
         retry_exponential_backoff=True,
         max_retry_delay=timedelta(minutes=5),
 
-        execution_timeout=timedelta(minutes=3),
+        execution_timeout=timedelta(minutes=3)
     )
     # ------------------------------------------------------------------------
     # Execute the production transformation pipeline
@@ -311,7 +304,7 @@ with DAG(
         retry_exponential_backoff=True,
         max_retry_delay=timedelta(minutes=10),
 
-        execution_timeout=timedelta(minutes=20),
+        execution_timeout=timedelta(minutes=20)
     )
 
     # ------------------------------------------------------------------------
@@ -327,7 +320,7 @@ with DAG(
         retry_exponential_backoff=True,
         max_retry_delay=timedelta(minutes=5),
 
-        execution_timeout=timedelta(minutes=5),
+        execution_timeout=timedelta(minutes=5)
     )
 
     # Production dependency chain.

@@ -3,7 +3,7 @@
 -- country_sk is generated automatically by PostgreSQL.
 -- ============================================================================
 
-INSERT INTO analytics.dim_country (
+INSERT INTO uat_olap.dim_country (
     country_id,
     name
 )
@@ -11,7 +11,7 @@ INSERT INTO analytics.dim_country (
 SELECT
     c.country_id,
     c.name
-FROM public.country AS c
+FROM uat_oltp.country AS c
 
 ON CONFLICT (country_id)
 

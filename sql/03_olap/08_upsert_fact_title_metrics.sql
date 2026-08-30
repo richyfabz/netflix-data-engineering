@@ -3,7 +3,7 @@
 -- Missing source metrics are imputed during the warehouse transformation.
 -- ============================================================================
 
-INSERT INTO analytics.fact_title_metrics (
+INSERT INTO uat_olap.fact_title_metrics (
     title_sk,
     imdb_score,
     imdb_votes,
@@ -50,9 +50,9 @@ SELECT
     NULLIF(TRIM(s.tmdb_score), '') IS NULL
         AS tmdb_score_imputed
 
-FROM staging.titles_raw AS s
+FROM dev.titles_raw AS s
 
-INNER JOIN analytics.dim_title AS dt
+INNER JOIN uat_olap.dim_title AS dt
     ON dt.title_id = s.id
 
 WHERE s.batch_id = %(batch_id)s

@@ -5,6 +5,7 @@ This module compares incoming source schemas against the expected
 source contract and classifies schema changes before ingestion.
 """
 
+import pandas as pd
 from src.database import get_etl_connection
 import hashlib
 
@@ -285,6 +286,77 @@ def value_matches_type(value, expected_type):
 
     except (ValueError, TypeError):
         return False
+ 
+                                                            
+
+def coerce_expected_datatypes(file_name,rows, expected_schema):             # Safely convert source values to their expected logical datatypes
+
+    for row_number, row in enumerate(rows, start=2):
+
+        for column_name, schema_rule in expected_schema.items():
+
+            if column_name not in row:
+                continue
+
+            value = row[column_name]
+
+            if value is None or value == "":
+                continue
+
+            expected_type = (
+                schema_rule.get("type")
+                if isinstance(schema_rule, dict)
+                else schema_rule
+            )
+
+            converted_value = value
+
+            try:
+
+                if expected_type == "integer":
+                    numeric_value = float(value)
+
+                    if not numeric_value.is_integer():
+                        continue
+
+                    converted_value = int(numeric_value)
+
+                elif expected_type == "float":
+                    converted_value = float(value)
+
+                elif expected_type == "string":
+                    converted_value = str(value)
+
+                elif expected_type == "boolean":
+                    normalised = str(value).strip().lower()
+
+                    if normalised in {"true", "1", "yes"}:
+                        converted_value = True
+
+                    elif normalised in {"false", "0", "no"}:
+                        converted_value = False
+
+                    else:
+                        continue
+
+            except (ValueError, TypeError):
+                continue
+
+            if str(value) != str(converted_value):
+
+                print(
+                    "DATATYPE COERCION:",
+                    file_name,
+                    f"row={row_number}",
+                    f"column={column_name}",
+                    f"original={value!r}",
+                    f"converted={converted_value!r}",
+                    f"expected_type={expected_type}",
+                )
+
+            row[column_name] = converted_value
+
+    return rows
 
 def detect_datatype_drift(
     file_name,

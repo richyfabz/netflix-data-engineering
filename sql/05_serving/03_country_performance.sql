@@ -8,7 +8,7 @@
 --   - Which countries perform best according to TMDB?
 --   - Which countries have the highest average popularity?
 
-CREATE OR REPLACE VIEW serving.country_performance AS
+CREATE OR REPLACE VIEW production.country_performance AS
 SELECT
     dc.country_sk,
     dc.country_id,
@@ -47,12 +47,12 @@ SELECT
         WHERE ftm.tmdb_score_imputed = TRUE
     ) AS imputed_tmdb_score_count
 
-FROM analytics.dim_country AS dc
+FROM uat_olap.dim_country AS dc
 
-LEFT JOIN analytics.bridge_title_country AS btc
+LEFT JOIN uat_olap.bridge_title_country AS btc
     ON btc.country_sk = dc.country_sk
 
-LEFT JOIN analytics.fact_title_metrics AS ftm
+LEFT JOIN uat_olap.fact_title_metrics AS ftm
     ON ftm.title_sk = btc.title_sk
 
 GROUP BY
