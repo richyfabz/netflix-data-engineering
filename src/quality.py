@@ -76,7 +76,24 @@ ZERO_VIOLATION_CHECKS = {
             ON fm.title_sk = dt.title_sk
 
         WHERE fm.title_sk IS NULL;
-    """,
+    """, 
+    
+    "missing_title_ingestion_dates": """
+    SELECT COUNT(*)
+    FROM uat_olap.dim_title
+    WHERE ingestion_date_sk IS NULL;
+        """,
+
+        "orphan_ingestion_date_keys": """
+            SELECT COUNT(*)
+            FROM uat_olap.dim_title AS dt
+
+            LEFT JOIN uat_olap.dim_date AS dd
+                ON dd.date_sk = dt.ingestion_date_sk
+
+            WHERE dt.ingestion_date_sk IS NOT NULL
+            AND dd.date_sk IS NULL;
+        """
 }
 
 

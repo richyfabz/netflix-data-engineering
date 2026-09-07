@@ -1,6 +1,4 @@
--- ============================================================================
--- Incrementally upsert the title dimension from OLTP + current staging batch.
--- ============================================================================
+-- Incrementally upsert the title dimension from OLTP + current DEV batch.
 
 INSERT INTO uat_olap.dim_title (
     title_sk,
@@ -8,7 +6,8 @@ INSERT INTO uat_olap.dim_title (
     title_name,
     type,
     age_certification,
-    release_year
+    release_year,
+    ingestion_date_sk
 )
 
 SELECT
@@ -26,7 +25,9 @@ SELECT
         WHEN NULLIF(s.release_year, '') IS NULL
             THEN NULL
         ELSE s.release_year::INTEGER
-    END AS release_year
+    END AS release_year,
+
+    TO_CHAR(t.ingested_at::DATE, 'YYYYMMDD')::INTEGER AS ingestion_date_sk
 
 FROM uat_oltp.title AS t
 
@@ -39,6 +40,7 @@ LEFT JOIN uat_olap.dim_title AS existing
 
 WHERE t.title_id IS NOT NULL
   AND t.title_name IS NOT NULL
+  AND t.ingested_at IS NOT NULL
 
 ON CONFLICT (title_id)
 
@@ -46,4 +48,5 @@ DO UPDATE SET
     title_name = EXCLUDED.title_name,
     type = EXCLUDED.type,
     age_certification = EXCLUDED.age_certification,
-    release_year = EXCLUDED.release_year;
+    release_year = EXCLUDED.release_year,
+    ingestion_date_sk = EXCLUDED.ingestion_date_sk;

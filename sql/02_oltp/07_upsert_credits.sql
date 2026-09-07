@@ -1,19 +1,22 @@
 -- ============================================================================
 -- Incrementally load unique title/person credit relationships.
+-- Preserve the original DEV ingestion timestamp.
 -- ============================================================================
 
 INSERT INTO uat_oltp.credit (
     title_id,
     person_id,
     role,
-    character
+    character,
+    ingested_at
 )
 
 SELECT DISTINCT
     c.id AS title_id,
     c.person_id::INTEGER AS person_id,
     c.role,
-    NULLIF(c.character, '') AS character
+    NULLIF(c.character, '') AS character,
+    c.ingested_at
 
 FROM dev.credits_raw AS c
 
@@ -31,6 +34,6 @@ WHERE c.batch_id = %(batch_id)s
   AND c.role IS NOT NULL
   AND c.role <> ''
 
--- The business-key unique index protects against duplicate credits.
+-- Existing business-key relationships are not duplicated.
 ON CONFLICT
 DO NOTHING;

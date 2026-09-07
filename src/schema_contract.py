@@ -188,10 +188,7 @@ def validate_schema_contract(
         actual_columns - expected_columns
     )
 
-    # ---------------------------------------------------------
-    # Breaking schema drift
-    # ---------------------------------------------------------
-
+    # Missing columns are breaking schema changes.
     for column in missing_columns:
         log_schema_change(
             file_name=file_name,
@@ -206,10 +203,7 @@ def validate_schema_contract(
             details="Required source column disappeared.",
         )
 
-    # ---------------------------------------------------------
-    # Non-breaking additive drift
-    # ---------------------------------------------------------
-
+    # Unexpected columns are also breaking schema changes.
     for column in added_columns:
         log_schema_change(
             file_name=file_name,
@@ -219,37 +213,27 @@ def validate_schema_contract(
             file_checksum=file_checksum,
             schema_version=schema_version,
             old_definition=None,
-            new_definition="additional source column",
-            is_breaking=False,
+            new_definition="unexpected source column",
+            is_breaking=True,
             details=(
-                "New source column detected. "
-                "Pipeline accepted the file but does not yet model this field."
+                "Unexpected source column detected. "
+                "Ingestion blocked until the schema contract is reviewed."
             ),
         )
 
-    # ---------------------------------------------------------
-    # Visible operational alert
-    # ---------------------------------------------------------
-
-    if added_columns:
+    # Any structural difference from the approved contract blocks ingestion.
+    if missing_columns or added_columns:
         print(
-            "SCHEMA DRIFT ALERT:",
+            "BREAKING SCHEMA CONTRACT ALERT:",
             file_name,
-            "new columns detected:",
-            added_columns,
-        )
-
-    if missing_columns:
-        print(
-            "BREAKING SCHEMA ALERT:",
-            file_name,
-            "required columns missing:",
-            missing_columns,
+            f"missing_columns={missing_columns}",
+            f"unexpected_columns={added_columns}",
         )
 
         raise ValueError(
-            f"Breaking schema change detected in {file_name}. "
-            f"Missing required columns: {missing_columns}"
+            f"Schema contract violation detected in {file_name}. "
+            f"Missing columns: {missing_columns}. "
+            f"Unexpected columns: {added_columns}."
         )
 
     return {
@@ -258,7 +242,6 @@ def validate_schema_contract(
         "added_columns": added_columns,
         "schema_valid": True,
     }
-
 def value_matches_type(value, expected_type):
     """Check whether a source value matches the expected logical datatype."""
 

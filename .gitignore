@@ -42,3 +42,13 @@ data/incoming/*
 
 data/archive/*
 !data/archive/.gitkeep
+# Runtime pipeline files
+data/incoming/*.csv
+data/archive/*.csv
+
+# Keep directory placeholders
+!data/incoming/.gitkeep
+!data/archive/.gitkeep
+
+# Temporary pipeline test batches
+data/fresh_date_test*/

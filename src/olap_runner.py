@@ -15,6 +15,7 @@ OLAP_SQL_DIR = (
 
 
 OLAP_TRANSFORMATIONS = [
+    "00_sync_dim_date.sql",
     "01_upsert_dim_title.sql",
     "02_upsert_dim_person.sql",
     "03_upsert_dim_genre.sql",

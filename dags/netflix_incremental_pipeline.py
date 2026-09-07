@@ -32,9 +32,7 @@ DAG_ID = "netflix_incremental_pipeline_continuous"
 PIPELINE_NAME = "netflix_incremental_pipeline"
 
 
-# ============================================================================
 # Stale batch recovery
-# ============================================================================
 
 def recover_abandoned_batches():
     """
@@ -63,9 +61,7 @@ def recover_abandoned_batches():
     return len(recovered_batches)
 
 
-# ============================================================================
 # Automatic source ingestion
-# ============================================================================
 
 def ingest_new_source_batch():
     """
@@ -93,20 +89,16 @@ def ingest_new_source_batch():
     return ingestion_result
 
 
-# ============================================================================
 # Production transformation execution
-# ============================================================================
 
 def execute_transformation(**context):
-    """
-    Execute the production transformation pipeline using the exact batch IDs
-    created by the ingestion task.
-    """
-
-    # Pull the dictionary returned by ingest_new_source_batch.
-    batch_ids = context["ti"].xcom_pull(
+  
+                                                # Execute the production transformation pipeline using the exact batch IDs
+                                                # created by the ingestion task.
+                                                
+    batch_ids = context["ti"].xcom_pull(        # Pull the dictionary returned by ingest_new_source_batch.
         task_ids="ingest_new_batch"
-    )
+    )                                                
 
     # Fail clearly if the expected XCom payload is missing.
     if not batch_ids:
@@ -127,8 +119,8 @@ def execute_transformation(**context):
         credits_batch_id
     )
 
-    # Reuse the production pipeline coordinator that already handles:
-    # OLTP, OLAP, quality validation, batch states, and checkpoint management.
+                                                        # Reuse the production pipeline coordinator that already handles:
+                                                        # OLTP, OLAP, quality validation, batch states, and checkpoint management.
     results = run_transformation_pipeline(titles_batch_id=titles_batch_id, credits_batch_id=credits_batch_id)
 
     print(
@@ -139,9 +131,7 @@ def execute_transformation(**context):
     return results
 
 
-# ============================================================================
 # Source archival
-# ============================================================================
 
 def archive_processed_source(**context):
     """
@@ -207,9 +197,7 @@ def source_batch_available():
 
     return titles_path.exists() and credits_path.exists()
 
-# ============================================================================
 # DAG definition
-# ============================================================================
 
 with DAG(
     dag_id=DAG_ID,
@@ -223,10 +211,8 @@ with DAG(
     # Do not create historical runs for missed scheduling periods.
     catchup=False,
 
-    # Only one pipeline run may modify the warehouse at a time.
     max_active_runs=1,
 
-    # Prevent abnormal DAG executions from remaining active indefinitely.
     dagrun_timeout=timedelta(minutes=35),
 
     tags=[
@@ -247,10 +233,7 @@ with DAG(
     soft_fail=True
 )
 
-    # ------------------------------------------------------------------------
     # Recover abandoned ingestion batches
-    # ------------------------------------------------------------------------
-
     recover_stale = PythonOperator(
         task_id="recover_stale_batches",
         python_callable=recover_abandoned_batches,
@@ -263,10 +246,7 @@ with DAG(
         execution_timeout=timedelta(minutes=3)
     )
 
-    # ------------------------------------------------------------------------
     # Detect and ingest a new source batch
-    # ------------------------------------------------------------------------
-
     ingest_batch = PythonOperator(
         task_id="ingest_new_batch",
         python_callable=ingest_new_source_batch,
@@ -291,10 +271,8 @@ with DAG(
 
         execution_timeout=timedelta(minutes=3)
     )
-    # ------------------------------------------------------------------------
-    # Execute the production transformation pipeline
-    # ------------------------------------------------------------------------
 
+    # Execute the production transformation pipeline
     run_pipeline = PythonOperator(
         task_id="run_transformation_pipeline",
         python_callable=execute_transformation,
@@ -307,10 +285,7 @@ with DAG(
         execution_timeout=timedelta(minutes=20)
     )
 
-    # ------------------------------------------------------------------------
     # Archive the source files only after a successful pipeline run
-    # ------------------------------------------------------------------------
-
     archive_source = PythonOperator(
         task_id="archive_source_files",
         python_callable=archive_processed_source,

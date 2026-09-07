@@ -1,10 +1,4 @@
--- ============================================================================
 -- Title overview serving view.
---
--- Provides one business-friendly record per Netflix title together with
--- classification, release information, ratings, popularity, and data-quality
--- indicators required for reporting and Power BI analysis.
--- ============================================================================
 
 CREATE OR REPLACE VIEW production.title_overview AS
 SELECT
@@ -21,7 +15,21 @@ SELECT
     ftm.imdb_score_imputed,
     ftm.imdb_votes_imputed,
     ftm.tmdb_score_imputed,
-    ftm.tmdb_popularity_imputed
+    ftm.tmdb_popularity_imputed,
+    dt.ingestion_date_sk,
+    dd.full_date AS ingestion_date,
+    dd.day_name AS ingestion_day_name,
+    dd.week AS ingestion_week,
+    dd.month AS ingestion_month,
+    dd.month_name AS ingestion_month_name,
+    dd.quarter AS ingestion_quarter,
+    dd.year AS ingestion_year,
+    dd.is_weekend AS ingestion_is_weekend
+
 FROM uat_olap.dim_title AS dt
+
 LEFT JOIN uat_olap.fact_title_metrics AS ftm
-    ON ftm.title_sk = dt.title_sk;
+    ON ftm.title_sk = dt.title_sk
+
+LEFT JOIN uat_olap.dim_date AS dd
+    ON dd.date_sk = dt.ingestion_date_sk;
