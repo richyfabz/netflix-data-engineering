@@ -1215,37 +1215,7 @@ The most important engineering lessons from building the project were:
 
 ---
 
-## 20. Power BI portfolio assets
 
-For a public GitHub portfolio, add screenshots and a short demo under `docs/`:
-
-```text
-docs/
-├── images/
-│   ├── executive-overview.png
-│   ├── content-analysis.png
-│   ├── geography-people.png
-│   ├── country-details.png
-│   ├── data-model.png
-│   └── dynamic-rls-test.png
-└── demo/
-    └── powerbi-walkthrough.mp4
-```
-
-A useful demo sequence is:
-
-1. Executive Overview and report filtering.
-2. Content Analysis.
-3. Geography & People.
-4. Country Insights / World Map / Search Country Details bookmark navigation.
-5. Country search and drill-through into Country Details.
-6. Tooltip interactions.
-7. Dynamic RLS comparison between users with different permitted countries.
-
-Do not include credentials, private account details or sensitive connection information in screenshots or recordings.
-
----
-
-## 21. Detailed documentation
+## 20. Detailed documentation
 
 See [`docs/PROJECT_DOCUMENTATION.md`](docs/PROJECT_DOCUMENTATION.md) for the full architecture, build-from-scratch procedure, orchestration design, troubleshooting guide and lessons learned.
