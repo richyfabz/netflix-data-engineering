@@ -1,12 +1,12 @@
 # Netflix Incremental Data Engineering Pipeline
 
-An end-to-end, incremental analytics engineering project that turns
+An end-to-end, incremental analytics engineering project that turns Netflix catalogue source files into a governed PostgreSQL warehouse and Power BI analytics solution.
 
-Netflix catalogue source files into a governed PostgreSQL warehouse and
+The current architecture follows a controlled promotion path:
 
-analytics model, orchestrated by Apache Airflow and prepared for Power
+**CSV source files → Apache Airflow → DEV → UAT OLTP → UAT OLAP → quality gate → PRODUCTION views → Power BI.**
 
-BI consumption.
+Pipeline metadata, batch history, schema-drift records, quality results and watermarks are maintained separately in the `etl` schema.
 
 The project is designed as more than a one-off CSV-to-dashboard
 
@@ -70,243 +70,206 @@ handling.
 
 ## 2. High-level architecture
 
+The project was refactored from the earlier raw/OLTP/analytics naming into explicit **DEV, UAT and PRODUCTION stages**. This makes the movement of data through the pipeline clearer and separates ingestion, transformation/testing and BI-serving responsibilities.
+
 ```text
-
-                     SOURCE SYSTEM
-
-               titles.csv + credits.csv
-
+                    SOURCE SYSTEM
+              titles.csv + credits.csv
                          |
-
                          v
-
-                data/incoming/
-
+                  data/incoming/
                          |
-
                          v
-
-              +---------------------+
-
-              | Apache Airflow DAG  |
-
-              | source-file sensor  |
-
-              +----------+----------+
-
+                 APACHE AIRFLOW
+        sensor / schema validation / checksum
                          |
-
                          v
-
-               stale batch recovery
-
-                         |
-
-                         v
-
-               source batch ingestion
-
-                 /       |       \\
-
-                /        |        \\
-
-        schema contract checksum  batch tracking
-
-                \        |        /
-
-                 \       |       /
-
-                         v
-
-                 PostgreSQL RAW/STAGING
-
-                         |
-
-                         v
-
-                  OLTP / 3NF MODEL
-
-      title -- credit -- person -- genre -- country
-
-        |                    |
-
-        +-- title_genre -----+
-
-        +-- title_country ---+
-
-                         |
-
-                         v
-
-                   OLAP / ANALYTICS
-
-              +----------------------+
-
-              | dim_title            |
-
-              | dim_person           |
-
-              | dim_genre            |
-
-              | bridge_title_genre   |
-
-              | fact_credits         |
-
-              | fact_title_metrics   |
-
-              +----------+-----------+
-
-                         |
-
-                         v
-
-                  DATA QUALITY GATES
-
-                         |
-
-                         v
-
-               CHECKPOINT / BATCH SUCCESS
-
-                         |
-
-                         v
-
-                  SOURCE ARCHIVAL
-
-                         |
-
-                         v
-
-                      POWER BI
-
++------------------------------------------------------+
+| DEV                                                  |
+| Validated source-shaped landing/staging data         |
++---------------------------+--------------------------+
+                            |
+                            v
++------------------------------------------------------+
+| UAT_OLTP                                             |
+| Normalized relational / 3NF transformation layer    |
++---------------------------+--------------------------+
+                            |
+                            v
++------------------------------------------------------+
+| UAT_OLAP                                             |
+| Dimensional analytical model                        |
+| dimensions / bridges / facts                        |
++---------------------------+--------------------------+
+                            |
+                            v
+                    DATA QUALITY GATE
+                            |
+                 pass ------+------ fail
+                  |                    |
+                  v                    v
++--------------------------------+   stop / record failure
+| PRODUCTION                     |
+| Stable BI-facing views         |
++---------------+----------------+
+                |
+                v
+             POWER BI
+                |
+                v
+ dashboards / RLS / drill-through / bookmarks / tooltips
 ```
+
+The `etl` schema operates alongside these stages and stores operational metadata such as batch history, pipeline control/watermarks, quality results and schema-change history.
 
 ### Runtime topology
 
-The development environment can span multiple systems:
+The local development environment spans multiple systems:
 
 ```text
-
-Airflow container
-
-      |
-
+Apache Airflow
+    |
 Docker Desktop on macOS
-
-      |
-
-macOS host networking
-
-      |
-
-VMware Fusion network
-
-      |
-
-Windows VM : 5432
-
-      |
-
-PostgreSQL warehouse
-
-      |
-
-Power BI
-
+    |
+macOS host / VMware networking
+    |
+Windows 11 VM
+    |
+PostgreSQL 18 warehouse
+    |
+Power BI Desktop
 ```
 
-`localhost` inside an Airflow container is the container itself, not a
-
-PostgreSQL instance running inside a Windows VM. Always use the VM
-
-address reachable from Docker.
+This is a **local production-style architecture**. It demonstrates environment separation and controlled data promotion without claiming to be a cloud production deployment.
 
 ---
 
-## 3. Data layers
+## 3. DEV → UAT → PRODUCTION data stages
 
-### Source layer
+### Source
 
-The pipeline expects a complete pair:
+The pipeline expects a complete source pair:
 
 ```text
-
 data/incoming/
-
 ├── titles.csv
-
 └── credits.csv
-
 ```
 
-A source batch is not processed until both files exist.
+Both files are treated as one logical batch. Schema validation occurs before the pair is allowed into DEV.
 
-### Staging/raw layer
+### DEV — validated landing layer
 
-The raw tables preserve source-shaped data before business
+The `dev` schema is the first database stage after source validation. It preserves source-shaped data and acts as the controlled landing area for accepted batches.
 
-transformations. The project uses `raw_title` and `raw_credit` as
+Responsibilities include:
 
-landing structures. This provides a controlled boundary between external
+- receiving validated title and credit data;
+- preserving the ingestion boundary between external files and transformed models;
+- carrying the ingestion timestamp created at source ingestion;
+- preventing invalid source pairs from reaching downstream layers.
 
-files and the relational model.
+### UAT_OLTP — normalized relational layer
 
-### OLTP layer
+`uat_oltp` transforms DEV data into the normalized relational/3NF model.
 
-The operational model is normalized to reduce duplication and correctly
+Core tables include:
 
-represent many-to-many relationships.
+```text
+uat_oltp.title
+uat_oltp.person
+uat_oltp.genre
+uat_oltp.country
+uat_oltp.credit
+uat_oltp.title_genre
+uat_oltp.title_country
+```
 
-Core entities include:
+`title_genre` and `title_country` resolve many-to-many relationships instead of storing repeating values inside the title record.
 
--   `title`
+### UAT_OLAP — dimensional analytical layer
 
--   `person`
+`uat_olap` converts the normalized model into the dimensional structures used for analytical validation and downstream BI serving.
 
--   `credit`
+```text
+uat_olap.dim_title
+uat_olap.dim_person
+uat_olap.dim_genre
+uat_olap.dim_country
+uat_olap.dim_date
 
--   `genre`
+uat_olap.bridge_title_genre
+uat_olap.bridge_title_country
 
--   `country`
+uat_olap.fact_credits
+uat_olap.fact_title_metrics
+```
 
--   `title_genre`
+`fact_credits` acts as a relationship/factless fact between people and titles. `fact_title_metrics` stores title-level analytical metrics such as IMDb score, IMDb votes, TMDb popularity and TMDb score.
 
--   `title_country`
+Surrogate keys such as `title_sk`, `person_sk`, `genre_sk`, `country_sk` and `date_sk` are used for analytical relationships.
 
-`title_genre` and `title_country` resolve many-to-many relationships
+### Quality gate
 
-instead of storing repeating values inside a title record.
+Data is not promoted to the BI-facing production contract merely because transformation completed. The pipeline validates structural integrity, keys, relationships and analytical metrics first.
 
-### OLAP layer
+A failed quality gate prevents the successful checkpoint from advancing.
 
-The `analytics` schema is designed for analytical querying and BI.
+### PRODUCTION — BI-serving layer
 
-Key objects include:
+The `production` schema is the stable reporting contract exposed to Power BI through purpose-built views.
 
--   `analytics.dim_title`
+Known production views include:
 
--   `analytics.dim_person`
+```text
+production.title_overview
+production.genre_performance
+production.country_performance
+production.top_people
+production.pipeline_health
+production.country_top_titles
+```
 
--   `analytics.dim_genre`
+`production.country_top_titles` was added specifically to provide the correct grain for the country-level Top Titles/poster experience.
 
--   `analytics.bridge_title_genre`
+Power BI can also use the required `uat_olap` dimensional tables for semantic-model relationships, while production views provide clean BI-facing outputs for reporting use cases.
 
--   `analytics.fact_credits`
+### ETL control plane
 
--   `analytics.fact_title_metrics`
+The `etl` schema is not another business-data promotion stage. It is the pipeline control plane.
 
-`fact_credits` behaves as a factless/relationship fact: the existence of
+Important metadata objects include:
 
-a row records that a person was credited on a title in a particular
+```text
+etl.batch_history
+etl.pipeline_control
+etl.quality_results
+etl.schema_change_history
+```
 
-role. `fact_title_metrics` stores measurable title-level values such as
+They track batches, checksums, processing state, quality outcomes, schema drift and the last successful watermark.
 
-IMDb score, IMDb votes, TMDB popularity and TMDB score.
+---
 
-Surrogate keys decouple analytical relationships from source natural
+## Architecture refactor
 
-keys.
+The current schema architecture replaced the earlier staging/public/analytics/serving naming with:
+
+```text
+dev
+uat_oltp
+uat_olap
+production
+etl
+```
+
+The main refactor migration is:
+
+```text
+sql/00_migrations/20260829_dev_uat_prod_refactor.sql
+```
+
+This refactor was validated end-to-end before the Power BI layer was finalized.
 
 ---
 
@@ -474,42 +437,40 @@ This keeps Airflow scheduling identity separate from persistent ETL
 
 lineage.
 
-The production dependency chain is:
+The effective pipeline flow is:
 
 ```text
-
 wait_for_source_batch
-
         |
-
         v
-
 recover_stale_batches
-
         |
-
         v
-
-ingest_new_batch
-
+schema validation + checksum
         |
-
         v
-
-resolve_latest_batches
-
+DEV ingestion
         |
-
         v
-
-run_transformation_pipeline
-
+UAT_OLTP synchronization
         |
-
         v
-
-archive_source_files
-
+UAT_OLAP synchronization
+        |
+        v
+quality checks
+        |
+        v
+batch completion / watermark
+        |
+        v
+archive source files
+        |
+        v
+PRODUCTION views
+        |
+        v
+Power BI
 ```
 
 ### Source sensor
@@ -952,7 +913,7 @@ For every test verify:
 
 ## 16. Power BI analytics layer
 
-Power BI is the presentation and self-service analytics layer of the project. It consumes the dimensional PostgreSQL analytics model rather than rebuilding warehouse transformations inside the report.
+Power BI is the presentation and self-service analytics layer of the project. It sits after the PRODUCTION serving stage: purpose-built `production` views provide the stable BI contract, while the required `uat_olap` dimensions, bridges and facts support the semantic model and relationship-driven analysis. Business transformations remain in PostgreSQL rather than being rebuilt repeatedly inside report visuals.
 
 ### Report pages
 
@@ -1215,7 +1176,37 @@ The most important engineering lessons from building the project were:
 
 ---
 
+## 20. Power BI portfolio assets
 
-## 20. Detailed documentation
+For a public GitHub portfolio, add screenshots and a short demo under `docs/`:
+
+```text
+docs/
+├── images/
+│   ├── executive-overview.png
+│   ├── content-analysis.png
+│   ├── geography-people.png
+│   ├── country-details.png
+│   ├── data-model.png
+│   └── dynamic-rls-test.png
+└── demo/
+    └── powerbi-walkthrough.mp4
+```
+
+A useful demo sequence is:
+
+1. Executive Overview and report filtering.
+2. Content Analysis.
+3. Geography & People.
+4. Country Insights / World Map / Search Country Details bookmark navigation.
+5. Country search and drill-through into Country Details.
+6. Tooltip interactions.
+7. Dynamic RLS comparison between users with different permitted countries.
+
+Do not include credentials, private account details or sensitive connection information in screenshots or recordings.
+
+---
+
+## 21. Detailed documentation
 
 See [`docs/PROJECT_DOCUMENTATION.md`](docs/PROJECT_DOCUMENTATION.md) for the full architecture, build-from-scratch procedure, orchestration design, troubleshooting guide and lessons learned.
