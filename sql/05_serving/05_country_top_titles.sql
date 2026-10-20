@@ -1,5 +1,4 @@
 CREATE OR REPLACE VIEW production.country_top_titles AS
-
 WITH ranked_titles AS (
     SELECT
         dc.country_name,
@@ -30,7 +29,6 @@ WITH ranked_titles AS (
     WHERE dto.poster_url IS NOT NULL
       AND dto.imdb_score IS NOT NULL
 )
-
 SELECT
     country_name,
     title_sk,
